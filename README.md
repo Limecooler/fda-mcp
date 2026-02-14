@@ -46,12 +46,32 @@ All search tools accept `search` (OpenFDA query string), `limit`, `skip`, and `s
 | `fda://reference/endpoints` | All 21 endpoints with descriptions |
 | `fda://reference/fields/{endpoint}` | Per-endpoint field reference |
 
-## Installation
+## Quick Start
 
-Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/).
+Requires [uv](https://docs.astral.sh/uv/). No clone needed — run directly from PyPI:
 
 ```bash
-git clone <repo-url> fda-mcp
+uvx fda-mcp
+```
+
+Or with an API key for higher rate limits:
+
+```bash
+OPENFDA_API_KEY=your-key-here uvx fda-mcp
+```
+
+## Installation
+
+### From PyPI (recommended)
+
+```bash
+uv tool install fda-mcp
+```
+
+### From source
+
+```bash
+git clone https://github.com/Limecooler/fda-mcp.git
 cd fda-mcp
 uv sync
 ```
@@ -78,8 +98,8 @@ Add to your `claude_desktop_config.json`:
 {
   "mcpServers": {
     "fda": {
-      "command": "uv",
-      "args": ["--directory", "/absolute/path/to/fda-mcp", "run", "fda-mcp"],
+      "command": "uvx",
+      "args": ["fda-mcp"],
       "env": {
         "OPENFDA_API_KEY": "your-key-here"
       }
@@ -103,8 +123,8 @@ Add the server to your project's `.claude/settings.json` or global settings:
 {
   "mcpServers": {
     "fda": {
-      "command": "uv",
-      "args": ["--directory", "/absolute/path/to/fda-mcp", "run", "fda-mcp"],
+      "command": "uvx",
+      "args": ["fda-mcp"],
       "env": {
         "OPENFDA_API_KEY": "your-key-here"
       }
