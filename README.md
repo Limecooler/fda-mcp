@@ -1,16 +1,71 @@
 # FDA MCP Server
 
-An MCP (Model Context Protocol) server that provides LLM-optimized access to FDA data through the [OpenFDA API](https://open.fda.gov/) and direct FDA document retrieval. Covers all 21 OpenFDA endpoints plus regulatory decision documents (510(k) summaries, De Novo decisions, PMA approval letters).
+[![PyPI](https://img.shields.io/pypi/v/fda-mcp)](https://pypi.org/project/fda-mcp/)
+[![Python](https://img.shields.io/pypi/pyversions/fda-mcp)](https://pypi.org/project/fda-mcp/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+An [MCP](https://modelcontextprotocol.io/) server that provides LLM-optimized access to FDA data through the [OpenFDA API](https://open.fda.gov/) and direct FDA document retrieval. Covers all 21 OpenFDA endpoints plus regulatory decision documents (510(k) summaries, De Novo decisions, PMA approval letters).
+
+## Quick Start
+
+No clone or local build required. Install [uv](https://docs.astral.sh/uv/) and run directly from [PyPI](https://pypi.org/project/fda-mcp/):
+
+```bash
+uvx fda-mcp
+```
+
+That's it. The server starts on stdio and is ready for any MCP client.
+
+## Usage with Claude Desktop
+
+Add to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "fda": {
+      "command": "uvx",
+      "args": ["fda-mcp"],
+      "env": {
+        "OPENFDA_API_KEY": "your-key-here"
+      }
+    }
+  }
+}
+```
+
+Config file location:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+## Usage with Claude Code
+
+Add directly from the command line:
+
+```bash
+claude mcp add fda -- uvx fda-mcp
+```
+
+To include an API key for higher rate limits:
+
+```bash
+claude mcp add fda -e OPENFDA_API_KEY=your-key-here -- uvx fda-mcp
+```
+
+Or add interactively within Claude Code using the `/mcp` slash command.
+
+## API Key (Optional)
+
+The `OPENFDA_API_KEY` environment variable is optional. Without it you get 40 requests/minute. With a free key from [open.fda.gov](https://open.fda.gov/apis/authentication/) you get 240 requests/minute.
 
 ## Features
 
 - **12 MCP tools** covering drug, device, food, and other FDA data
 - **3 MCP resources** for query syntax help, endpoint reference, and field discovery
-- **All 21 OpenFDA endpoints** organized into 9 search tools by outcome, not endpoint
+- **All 21 OpenFDA endpoints** organized into 9 search tools grouped by outcome
 - **FDA decision documents** — downloads and extracts text from 510(k) summaries, De Novo decisions, PMA approvals, SSEDs, and supplements
 - **OCR fallback** for scanned PDF documents (older FDA submissions)
 - **Context-efficient responses** — summarized output, field discovery on demand, pagination guidance
-- **Optional API key** support for higher rate limits
 
 ## Tools
 
@@ -45,95 +100,6 @@ All search tools accept `search` (OpenFDA query string), `limit`, `skip`, and `s
 | `fda://reference/query-syntax` | OpenFDA query syntax: AND/OR/NOT, wildcards, date ranges, exact matching |
 | `fda://reference/endpoints` | All 21 endpoints with descriptions |
 | `fda://reference/fields/{endpoint}` | Per-endpoint field reference |
-
-## Quick Start
-
-Requires [uv](https://docs.astral.sh/uv/). No clone needed — run directly from PyPI:
-
-```bash
-uvx fda-mcp
-```
-
-Or with an API key for higher rate limits:
-
-```bash
-OPENFDA_API_KEY=your-key-here uvx fda-mcp
-```
-
-## Installation
-
-### From PyPI (recommended)
-
-```bash
-uv tool install fda-mcp
-```
-
-### From source
-
-```bash
-git clone https://github.com/Limecooler/fda-mcp.git
-cd fda-mcp
-uv sync
-```
-
-### Optional: OCR support for scanned PDFs
-
-Many older FDA documents (pre-2010) are scanned images. To extract text from these:
-
-```bash
-# macOS
-brew install tesseract poppler
-
-# Linux (Debian/Ubuntu)
-apt install tesseract-ocr poppler-utils
-```
-
-Without these, the server will still work — it returns a helpful message when it encounters a scanned document it can't read.
-
-## Usage with Claude Desktop
-
-Add to your `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "fda": {
-      "command": "uvx",
-      "args": ["fda-mcp"],
-      "env": {
-        "OPENFDA_API_KEY": "your-key-here"
-      }
-    }
-  }
-}
-```
-
-The `OPENFDA_API_KEY` is optional. Without it, you get 40 requests/minute. With a key (free from [open.fda.gov](https://open.fda.gov/apis/authentication/)), you get 240 requests/minute.
-
-### Config file location
-
-- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-## Usage with Claude Code
-
-Add the server to your project's `.claude/settings.json` or global settings:
-
-```json
-{
-  "mcpServers": {
-    "fda": {
-      "command": "uvx",
-      "args": ["fda-mcp"],
-      "env": {
-        "OPENFDA_API_KEY": "your-key-here"
-      }
-    }
-  }
-}
-```
-
-Or add it interactively with `/mcp` in Claude Code.
 
 ## Example Queries
 
@@ -186,10 +152,50 @@ patient.reaction.reactionmeddrapt.exact:"Nausea"
 
 Use `list_searchable_fields` or the `fda://reference/query-syntax` resource for the full reference.
 
+## Installation Options
+
+### From PyPI (recommended)
+
+```bash
+# Run directly without installing
+uvx fda-mcp
+
+# Or install as a persistent tool
+uv tool install fda-mcp
+
+# Or install with pip
+pip install fda-mcp
+```
+
+### From source
+
+```bash
+git clone https://github.com/Limecooler/fda-mcp.git
+cd fda-mcp
+uv sync
+uv run fda-mcp
+```
+
+### Optional: OCR support for scanned PDFs
+
+Many older FDA documents (pre-2010) are scanned images. To extract text from these:
+
+```bash
+# macOS
+brew install tesseract poppler
+
+# Linux (Debian/Ubuntu)
+apt install tesseract-ocr poppler-utils
+```
+
+Without these, the server still works — it returns a helpful message when it encounters a scanned document it can't read.
+
 ## Development
 
 ```bash
 # Install with dev dependencies
+git clone https://github.com/Limecooler/fda-mcp.git
+cd fda-mcp
 uv sync --all-extras
 
 # Run unit tests (157 tests, no network)
@@ -228,26 +234,6 @@ src/fda_mcp/
     ├── query_syntax.py    # Query syntax reference
     ├── endpoints_resource.py
     └── field_definitions.py
-```
-
-### Test Structure
-
-```
-tests/
-├── test_endpoints.py                    # Endpoint enum
-├── test_openfda_client.py               # HTTP client
-├── test_summarizer.py                   # Response summarizers (21 endpoints)
-├── test_document_urls.py                # URL construction
-├── test_document_fetcher.py             # PDF extraction + OCR
-├── test_tool_search_*.py                # 9 search tool test files
-├── test_tool_count_records.py           # Count tool
-├── test_tool_list_fields.py             # Fields tool
-├── test_tool_decision_documents.py      # Document tool
-├── test_resources.py                    # MCP resources
-├── test_error_handling.py               # Error cases
-└── integration/
-    ├── test_live_openfda.py             # Live API (21 endpoints)
-    └── test_live_documents.py           # Live PDF fetch
 ```
 
 ## How It Works
