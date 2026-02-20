@@ -46,7 +46,11 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "primarysource.qualification": {
                 "type": "string",
-                "description": "Reporter qualification",
+                "description": (
+                    "Reporter qualification (numeric). "
+                    "1=Physician, 2=Pharmacist, 3=Other Health Professional, "
+                    "4=Lawyer, 5=Consumer/Non-Health Professional"
+                ),
             },
             "patient.patientonsetage": {
                 "type": "string",
@@ -178,11 +182,15 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "classification": {
                 "type": "string",
-                "description": "Recall class (Class I/II/III)",
+                "description": (
+                    "Recall class. Values: \"Class I\" (most serious, "
+                    "health hazard), \"Class II\" (less serious), "
+                    "\"Class III\" (least serious)"
+                ),
             },
             "status": {
                 "type": "string",
-                "description": "Recall status",
+                "description": "Recall status: Ongoing, Terminated, or Completed",
             },
             "reason_for_recall": {
                 "type": "string",
@@ -200,7 +208,7 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "report_date": {
                 "type": "date",
-                "description": "Report date",
+                "description": "Report date (YYYYMMDD)",
             },
             "distribution_pattern": {
                 "type": "string",
@@ -208,11 +216,14 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "voluntary_mandated": {
                 "type": "string",
-                "description": "Voluntary or mandated",
+                "description": (
+                    "Voluntary or mandated. Values: "
+                    "\"Voluntary: Firm initiated\", \"FDA Mandated\""
+                ),
             },
             "state": {
                 "type": "string",
-                "description": "State of recalling firm",
+                "description": "State of recalling firm (2-letter abbreviation)",
             },
         },
     },
@@ -284,7 +295,7 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
         "common": {
             "k_number": {
                 "type": "string",
-                "description": "510(k) number",
+                "description": "510(k) number (e.g., K213456)",
             },
             "device_name": {
                 "type": "string",
@@ -294,35 +305,71 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
                 "type": "string",
                 "description": "Applicant/company name",
             },
+            "advisory_committee": {
+                "type": "string",
+                "description": (
+                    "FDA advisory committee (2-letter code). "
+                    "AN=Anesthesiology, CH=Clinical Chemistry, CV=Cardiovascular, "
+                    "DE=Dental, EN=Ear/Nose/Throat, GU=Gastroenterology/Urology, "
+                    "HE=Hematology, HO=General Hospital, IM=Immunology, "
+                    "MG=Medical Genetics, MI=Microbiology, NE=Neurology, "
+                    "OB=Obstetrics/Gynecology, OP=Ophthalmic, OR=Orthopedic, "
+                    "PA=Pathology, PM=Physical Medicine, RA=Radiology, "
+                    "SU=General/Plastic Surgery, TX=Clinical Toxicology"
+                ),
+            },
+            "advisory_committee_description": {
+                "type": "string",
+                "description": "Full name of advisory committee (e.g., 'Dental')",
+            },
+            "decision_code": {
+                "type": "string",
+                "description": (
+                    "Decision code. SESE=Substantially Equivalent, "
+                    "DENG=De Novo Granted, SN=Not Substantially Equivalent, "
+                    "SESK=SE(Kit), SEKD=SE(Kit Device), SESD=SE(Split Device), "
+                    "SESU=SE(Unknown), SESP=SE(Split Pending), PT=Petition"
+                ),
+            },
             "decision_description": {
                 "type": "string",
-                "description": "Decision (e.g., SESE, SESD)",
+                "description": "Full text of decision (e.g., 'Substantially Equivalent')",
             },
             "decision_date": {
                 "type": "date",
-                "description": "Decision date",
+                "description": "Decision date (YYYYMMDD)",
             },
             "product_code": {
                 "type": "string",
-                "description": "Product classification code",
+                "description": "Product classification code (3-letter, e.g., DQA)",
             },
         },
         "all": {
             "review_panel": {
                 "type": "string",
-                "description": "Review panel",
+                "description": (
+                    "Review panel (same 2-letter codes as advisory_committee). "
+                    "Note: quote 'OR' in queries since OR is a reserved operator"
+                ),
             },
             "clearance_type": {
                 "type": "string",
-                "description": "Clearance type",
+                "description": (
+                    "Clearance type: Traditional, Special, Abbreviated, "
+                    "Direct, Post-NSE, Dual Track"
+                ),
+            },
+            "statement_or_summary": {
+                "type": "string",
+                "description": "Whether a Summary or Statement was filed",
             },
             "date_received": {
                 "type": "date",
-                "description": "Date received",
+                "description": "Date received (YYYYMMDD)",
             },
             "third_party_flag": {
                 "type": "string",
-                "description": "Third party review",
+                "description": "Third party review (Y/N)",
             },
         },
     },
@@ -330,7 +377,7 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
         "common": {
             "pma_number": {
                 "type": "string",
-                "description": "PMA number",
+                "description": "PMA number (e.g., P140017)",
             },
             "trade_name": {
                 "type": "string",
@@ -340,31 +387,46 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
                 "type": "string",
                 "description": "Applicant/company name",
             },
+            "advisory_committee": {
+                "type": "string",
+                "description": (
+                    "FDA advisory committee (2-letter code). "
+                    "Same codes as device/510k: AN, CH, CV, DE, EN, GU, HE, "
+                    "HO, IM, MG, MI, NE, OB, OP, OR, PA, PM, RA, SU, TX"
+                ),
+            },
+            "advisory_committee_description": {
+                "type": "string",
+                "description": "Full name of advisory committee (e.g., 'Cardiovascular')",
+            },
+            "decision_code": {
+                "type": "string",
+                "description": "Decision code (e.g., APPR=Approved)",
+            },
             "decision_description": {
                 "type": "string",
-                "description": "Decision description",
+                "description": "Full text of decision",
             },
             "decision_date": {
                 "type": "date",
-                "description": "Decision date",
+                "description": "Decision date (YYYYMMDD)",
             },
             "product_code": {
                 "type": "string",
-                "description": "Product code",
+                "description": "Product classification code",
             },
         },
         "all": {
-            "advisory_committee_description": {
-                "type": "string",
-                "description": "Advisory committee",
-            },
             "supplement_number": {
                 "type": "string",
-                "description": "Supplement number",
+                "description": "Supplement number (e.g., S042)",
             },
             "supplement_type": {
                 "type": "string",
-                "description": "Supplement type",
+                "description": (
+                    "Supplement type: 30-Day Notice, Normal 180 Day Track, "
+                    "Real-Time Process, Panel Track, etc."
+                ),
             },
         },
     },
@@ -372,7 +434,7 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
         "common": {
             "product_code": {
                 "type": "string",
-                "description": "Product classification code",
+                "description": "Product classification code (3-letter, e.g., DQA)",
             },
             "device_name": {
                 "type": "string",
@@ -380,29 +442,64 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "device_class": {
                 "type": "string",
-                "description": "Device class (1, 2, or 3)",
+                "description": (
+                    "Device class. 1=Class I, 2=Class II, 3=Class III, "
+                    "f=HDE (Humanitarian Device Exemption), U=Unclassified, "
+                    "N=Not classified"
+                ),
             },
             "regulation_number": {
                 "type": "string",
-                "description": "CFR regulation number",
+                "description": "CFR regulation number (e.g., 872.3275)",
             },
             "medical_specialty_description": {
                 "type": "string",
-                "description": "Medical specialty",
+                "description": (
+                    "Medical specialty (e.g., 'Dental', 'Cardiovascular'). "
+                    "Matches advisory_committee descriptions from device/510k"
+                ),
+            },
+            "review_panel": {
+                "type": "string",
+                "description": (
+                    "Review panel (same 2-letter codes as device/510k advisory_committee). "
+                    "AN, CH, CV, DE, EN, GU, HE, HO, IM, MG, MI, NE, OB, OP, "
+                    "OR, PA, PM, RA, SU, TX. Note: quote 'OR' in queries"
+                ),
             },
         },
         "all": {
-            "review_panel": {
-                "type": "string",
-                "description": "Review panel",
-            },
             "submission_type_id": {
                 "type": "string",
-                "description": "Submission type ID",
+                "description": (
+                    "Submission type ID (numeric). "
+                    "1=510(k), 2=PMA, 3=Contact FDA, 4=510(k) Exempt, "
+                    "6=De Novo, 7=HDE, 8=Emergency Use"
+                ),
             },
             "definition": {
                 "type": "string",
-                "description": "Device definition",
+                "description": "Device definition text",
+            },
+            "implant_flag": {
+                "type": "string",
+                "description": "Is an implant (Y/N)",
+            },
+            "life_sustain_support_flag": {
+                "type": "string",
+                "description": "Life sustaining/supporting (Y/N)",
+            },
+            "gmp_exempt_flag": {
+                "type": "string",
+                "description": "GMP exempt (Y/N)",
+            },
+            "summary_malfunction_reporting": {
+                "type": "string",
+                "description": "Summary malfunction reporting (Eligible/Ineligible)",
+            },
+            "third_party_flag": {
+                "type": "string",
+                "description": "Third party review eligible (Y/N)",
             },
         },
     },
@@ -414,11 +511,14 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "classification": {
                 "type": "string",
-                "description": "Recall class",
+                "description": (
+                    "Recall class. Values: \"Class I\" (most serious), "
+                    "\"Class II\", \"Class III\" (least serious)"
+                ),
             },
             "status": {
                 "type": "string",
-                "description": "Recall status",
+                "description": "Recall status: Ongoing, Terminated, or Completed",
             },
             "reason_for_recall": {
                 "type": "string",
@@ -436,11 +536,18 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "report_date": {
                 "type": "date",
-                "description": "Report date",
+                "description": "Report date (YYYYMMDD)",
             },
             "distribution_pattern": {
                 "type": "string",
-                "description": "Distribution",
+                "description": "Distribution pattern",
+            },
+            "voluntary_mandated": {
+                "type": "string",
+                "description": (
+                    "Voluntary or mandated. Values: "
+                    "\"Voluntary: Firm initiated\", \"FDA Mandated\""
+                ),
             },
         },
     },
@@ -610,11 +717,14 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "classification": {
                 "type": "string",
-                "description": "Recall class",
+                "description": (
+                    "Recall class. Values: \"Class I\" (most serious), "
+                    "\"Class II\", \"Class III\" (least serious)"
+                ),
             },
             "status": {
                 "type": "string",
-                "description": "Recall status",
+                "description": "Recall status: Ongoing, Terminated, or Completed",
             },
             "reason_for_recall": {
                 "type": "string",
@@ -632,11 +742,18 @@ _FIELD_DEFS: dict[str, dict[str, dict[str, dict[str, str]]]] = {
             },
             "report_date": {
                 "type": "date",
-                "description": "Report date",
+                "description": "Report date (YYYYMMDD)",
             },
             "distribution_pattern": {
                 "type": "string",
-                "description": "Distribution",
+                "description": "Distribution pattern",
+            },
+            "voluntary_mandated": {
+                "type": "string",
+                "description": (
+                    "Voluntary or mandated. Values: "
+                    "\"Voluntary: Firm initiated\", \"FDA Mandated\""
+                ),
             },
         },
     },

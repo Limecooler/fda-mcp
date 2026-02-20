@@ -25,6 +25,16 @@ COMMON MISTAKES:
 - The .exact suffix is REQUIRED on count_field for text fields
 - Field names are nested with dots: patient.drug.openfda.brand_name
 - Dates are YYYYMMDD format, not ISO-8601
+
+QUERY RECIPES (natural language → API query):
+- De Novo grants: dataset=device_510k, search='decision_code:"DENG"'
+- De Novos by division: add advisory_committee code (DE=Dental, CV=Cardiovascular, etc.)
+- 510(k) clearances only: dataset=device_510k, search='decision_code:"SESE"'
+- Class III devices: dataset=device_classification, search='device_class:3'
+- PMA approvals: dataset=device_pma, search='decision_code:"APPR"'
+- Drug recalls by severity: dataset=drug_recalls, search='classification:"Class I"'
+- Recall status: search='status:"Ongoing"' (values: Ongoing, Terminated, Completed)
+- Adverse events by drug: dataset=drug_adverse_events, search='patient.drug.openfda.brand_name:"DRUGNAME"'
 """
 
 mcp = FastMCP("fda-mcp", instructions=SERVER_INSTRUCTIONS)
