@@ -60,38 +60,32 @@ The `OPENFDA_API_KEY` environment variable is optional. Without it you get 40 re
 
 ## Features
 
-- **12 MCP tools** covering drug, device, food, and other FDA data
+- **4 MCP tools** — one unified search tool, count/aggregation, field discovery, and document retrieval
 - **3 MCP resources** for query syntax help, endpoint reference, and field discovery
-- **All 21 OpenFDA endpoints** organized into 9 search tools grouped by outcome
+- **All 21 OpenFDA endpoints** accessible via a single `search_fda` tool with a `dataset` parameter
+- **Server instructions** — query syntax and common mistakes are injected into every LLM context automatically
+- **Actionable error messages** — inline syntax help, troubleshooting tips, and `.exact` suffix warnings
 - **FDA decision documents** — downloads and extracts text from 510(k) summaries, De Novo decisions, PMA approvals, SSEDs, and supplements
 - **OCR fallback** for scanned PDF documents (older FDA submissions)
 - **Context-efficient responses** — summarized output, field discovery on demand, pagination guidance
 
 ## Tools
 
-### Search Tools (9)
-
-| Tool | Endpoints | Discriminator |
-|------|-----------|---------------|
-| `search_adverse_events` | drug/event, device/event, food/event | `product_type` |
-| `search_recalls` | drug/enforcement, device/enforcement, food/enforcement, device/recall | `product_type`, `source` |
-| `search_drug_labels` | drug/label | — |
-| `search_drugs` | drug/drugsfda, drug/ndc | `source` |
-| `search_drug_shortages` | drug/shortage | — |
-| `search_device_submissions` | device/510k, device/pma, device/classification, device/registrationlisting | `submission_type` |
-| `search_device_udi` | device/udi | — |
-| `search_substances` | other/substance, other/unii, other/nsde | `source` |
-| `search_other` | other/historicaldocument, device/covid19serology | `dataset` |
-
-All search tools accept `search` (OpenFDA query string), `limit`, `skip`, and `sort` parameters.
-
-### Cross-Cutting Tools (3)
-
 | Tool | Purpose |
 |------|---------|
-| `count_records` | Aggregation queries on any endpoint. Returns counts with percentages and narrative summary. |
-| `list_searchable_fields` | Returns searchable field names for any endpoint. Keeps field docs out of tool descriptions. |
+| `search_fda` | Search any of the 21 OpenFDA datasets. The `dataset` parameter selects the endpoint (e.g., `drug_adverse_events`, `device_510k`, `food_recalls`). Accepts `search`, `limit`, `skip`, and `sort`. |
+| `count_records` | Aggregation queries on any endpoint. Returns counts with percentages and narrative summary. Warns when `.exact` suffix is missing on text fields. |
+| `list_searchable_fields` | Returns searchable field names for any endpoint. Call before searching if unsure of field names. |
 | `get_decision_document` | Fetches FDA regulatory decision PDFs and extracts text. Supports 510(k), De Novo, PMA, SSED, and supplement documents. |
+
+### Dataset Values for `search_fda`
+
+| Category | Datasets |
+|----------|----------|
+| Drug | `drug_adverse_events`, `drug_labels`, `drug_ndc`, `drug_approvals`, `drug_recalls`, `drug_shortages` |
+| Device | `device_adverse_events`, `device_510k`, `device_pma`, `device_classification`, `device_recalls`, `device_recall_details`, `device_registration`, `device_udi`, `device_covid19_serology` |
+| Food | `food_adverse_events`, `food_recalls` |
+| Other | `historical_documents`, `substance_data`, `unii`, `nsde` |
 
 ### Resources (3)
 
@@ -198,7 +192,7 @@ git clone https://github.com/Limecooler/fda-mcp.git
 cd fda-mcp
 uv sync --all-extras
 
-# Run unit tests (157 tests, no network)
+# Run unit tests (187 tests, no network)
 uv run pytest
 
 # Run integration tests (hits real FDA API)
@@ -226,7 +220,8 @@ src/fda_mcp/
 │   ├── urls.py            # FDA document URL construction
 │   └── fetcher.py         # PDF download + text extraction + OCR
 ├── tools/
-│   ├── search.py          # 9 search tool handlers
+│   ├── _helpers.py        # Shared helpers (limit clamping)
+│   ├── search.py          # search_fda tool (all 21 endpoints)
 │   ├── count.py           # count_records tool
 │   ├── fields.py          # list_searchable_fields tool
 │   └── decision_documents.py
@@ -238,17 +233,23 @@ src/fda_mcp/
 
 ## How It Works
 
-### Context Efficiency
+### LLM Usability
 
-The server is designed to minimize context window usage when used by LLMs:
+The server is designed to be easy for LLMs to use correctly:
 
-1. **Response summarization** — Each endpoint type has a custom summarizer that extracts key fields and flattens nested structures. Drug labels truncate sections to 2,000 chars. PDF text defaults to 8,000 chars.
+1. **Server instructions** — Query syntax, workflow guidance, and common mistakes are injected into every LLM context automatically via the MCP protocol (~210 tokens).
 
-2. **Field discovery via tool** — Instead of listing all searchable fields in tool descriptions (which would cost ~8,000-11,000 tokens of persistent context), the `list_searchable_fields` tool provides them on demand.
+2. **Unified tool surface** — A single `search_fda` tool with a typed `dataset` parameter replaces 9 separate search tools, eliminating tool selection confusion.
 
-3. **Smart pagination** — Default page sizes are low (10 records). Responses include `total_results`, `showing`, and `has_more`. When results exceed 100, a tip suggests using `count_records` for aggregation.
+3. **Actionable errors** — `InvalidSearchError` includes inline syntax quick reference. `NotFoundError` includes troubleshooting steps and the endpoint used. No more references to invisible MCP resources.
 
-4. **Count enrichment** — `count_records` returns values with pre-calculated percentages and a one-sentence narrative summary.
+4. **Visible warnings** — Limit clamping and missing `.exact` suffix produce visible notes instead of silent fallbacks.
+
+5. **Response summarization** — Each endpoint type has a custom summarizer that extracts key fields and flattens nested structures. Drug labels truncate sections to 2,000 chars. PDF text defaults to 8,000 chars.
+
+6. **Field discovery via tool** — Instead of listing all searchable fields in tool descriptions (which would cost ~8,000-11,000 tokens of persistent context), the `list_searchable_fields` tool provides them on demand.
+
+7. **Smart pagination** — Default page sizes are low (10 records). Responses include `total_results`, `showing`, and `has_more`. When results exceed 100, a tip suggests using `count_records` for aggregation.
 
 ### FDA Decision Documents
 

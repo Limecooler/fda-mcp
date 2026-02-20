@@ -21,22 +21,35 @@ class RateLimitError(OpenFDAError):
 class NotFoundError(OpenFDAError):
     """No results found for the query."""
 
-    def __init__(self, detail: str = "") -> None:
-        msg = "No results found."
+    def __init__(self, detail: str = "", endpoint: str = "") -> None:
+        lines = ["No results found."]
         if detail:
-            msg += f" {detail}"
-        super().__init__(msg)
+            lines.append(detail)
+        lines.append("Troubleshooting:")
+        lines.append("- Verify field names with list_searchable_fields")
+        lines.append("- Try broader search terms or remove filters")
+        lines.append("- Dates must be YYYYMMDD format (not ISO-8601)")
+        if endpoint:
+            lines.append(f"- Endpoint used: {endpoint}")
+        super().__init__(" ".join(lines))
 
 
 class InvalidSearchError(OpenFDAError):
     """Invalid search syntax."""
 
     def __init__(self, detail: str = "") -> None:
-        msg = "Invalid search query syntax."
+        lines = ["Invalid search query."]
         if detail:
-            msg += f" {detail}"
-        msg += " Use the fda://reference/query-syntax resource for help."
-        super().__init__(msg)
+            lines.append(detail)
+        lines.append(
+            "Quick reference: "
+            'field:"value" for strings, '
+            "field:[20200101+TO+20231231] for date ranges, "
+            "field1:val1+AND+field2:val2 for AND, "
+            "_exists_:field for existence checks."
+        )
+        lines.append("Use list_searchable_fields to verify field names.")
+        super().__init__(" ".join(lines))
 
 
 class DocumentNotFoundError(ToolError):

@@ -1,273 +1,111 @@
-"""Search tool handlers — 9 tools covering all 21 OpenFDA search endpoints."""
+"""search_fda tool — unified search across all 21 OpenFDA endpoints."""
 
 from typing import Literal
+
+from mcp.server.fastmcp.exceptions import ToolError
 
 from fda_mcp.server import mcp
 from fda_mcp.openfda.client import openfda_client
 from fda_mcp.openfda.summarizer import summarize_response
+from fda_mcp.tools._helpers import clamp_limit
+
+DatasetType = Literal[
+    # Drug (6)
+    "drug_adverse_events", "drug_labels", "drug_ndc", "drug_approvals",
+    "drug_recalls", "drug_shortages",
+    # Device (9)
+    "device_adverse_events", "device_510k", "device_pma",
+    "device_classification", "device_recalls", "device_recall_details",
+    "device_registration", "device_udi", "device_covid19_serology",
+    # Food (2)
+    "food_adverse_events", "food_recalls",
+    # Other (4)
+    "historical_documents", "substance_data", "unii", "nsde",
+]
+
+_DATASET_TO_ENDPOINT: dict[str, str] = {
+    "drug_adverse_events": "drug/event",
+    "drug_labels": "drug/label",
+    "drug_ndc": "drug/ndc",
+    "drug_approvals": "drug/drugsfda",
+    "drug_recalls": "drug/enforcement",
+    "drug_shortages": "drug/shortage",
+    "device_adverse_events": "device/event",
+    "device_510k": "device/510k",
+    "device_pma": "device/pma",
+    "device_classification": "device/classification",
+    "device_recalls": "device/enforcement",
+    "device_recall_details": "device/recall",
+    "device_registration": "device/registrationlisting",
+    "device_udi": "device/udi",
+    "device_covid19_serology": "device/covid19serology",
+    "food_adverse_events": "food/event",
+    "food_recalls": "food/enforcement",
+    "historical_documents": "other/historicaldocument",
+    "substance_data": "other/substance",
+    "unii": "other/unii",
+    "nsde": "other/nsde",
+}
 
 
 @mcp.tool()
-async def search_adverse_events(
-    product_type: Literal["drug", "device", "food"],
+async def search_fda(
+    dataset: DatasetType,
     search: str,
     limit: int = 10,
     skip: int = 0,
     sort: str | None = None,
 ) -> str:
-    """Search FDA adverse event reports for drugs, devices, or foods.
-    Returns safety reports including reactions, outcomes, and product details.
+    """Search any of the 21 OpenFDA datasets. Returns individual records.
 
-    Example searches:
-      product_type="drug", search='patient.drug.openfda.brand_name:"ASPIRIN"'
-      product_type="device", search='device.generic_name:"catheter"+AND+event_type:"Injury"'
-      product_type="food", search='reactions:"NAUSEA"'
+    When to use: Finding specific records — adverse events, drug labels,
+    device submissions, recalls, etc. For aggregation/statistics, use
+    count_records instead. If unsure which fields to search, call
+    list_searchable_fields first.
+
+    Args:
+        dataset: Which FDA dataset to search. Options by category:
+            Drug: drug_adverse_events, drug_labels, drug_ndc, drug_approvals,
+                  drug_recalls, drug_shortages
+            Device: device_adverse_events, device_510k, device_pma,
+                    device_classification, device_recalls, device_recall_details,
+                    device_registration, device_udi, device_covid19_serology
+            Food: food_adverse_events, food_recalls
+            Other: historical_documents, substance_data, unii, nsde
+        search: OpenFDA query string. Quote string values and use + for spaces.
+        limit: Max results to return (default 10, max 100).
+        skip: Number of results to skip for pagination.
+        sort: Sort field and direction (e.g., "report_date:desc").
+
+    Examples:
+        Drug adverse events:
+          dataset="drug_adverse_events", search='patient.drug.openfda.brand_name:"ASPIRIN"'
+        Drug labels:
+          dataset="drug_labels", search='openfda.brand_name:"LIPITOR"'
+        Device 510(k):
+          dataset="device_510k", search='device_name:"pulse+oximeter"'
+        Food recalls:
+          dataset="food_recalls", search='classification:"Class I"'
+        Substance lookup:
+          dataset="substance_data", search='substance_name:"ASPIRIN"'
     """
-    endpoint_map = {
-        "drug": "drug/event",
-        "device": "device/event",
-        "food": "food/event",
-    }
-    result = await openfda_client.query(
-        endpoint=endpoint_map[product_type],
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response(endpoint_map[product_type], result)
+    endpoint = _DATASET_TO_ENDPOINT.get(dataset)
+    if endpoint is None:
+        raise ToolError(
+            f"Unknown dataset '{dataset}'. "
+            f"Valid datasets: {', '.join(sorted(_DATASET_TO_ENDPOINT.keys()))}"
+        )
 
+    limit, note = clamp_limit(limit, 100)
 
-@mcp.tool()
-async def search_recalls(
-    product_type: Literal["drug", "device", "food"],
-    search: str,
-    source: Literal["enforcement", "recall"] = "enforcement",
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search FDA recall and enforcement reports.
-    Use source="recall" (device only) for device-specific recall details.
-
-    Example searches:
-      product_type="drug", search='recalling_firm:"Pfizer"'
-      product_type="device", source="recall", search='product_code:"LZS"'
-      product_type="food", search='classification:"Class I"'
-    """
-    if source == "recall" and product_type != "device":
-        source = "enforcement"
-
-    endpoint_map = {
-        ("drug", "enforcement"): "drug/enforcement",
-        ("device", "enforcement"): "device/enforcement",
-        ("device", "recall"): "device/recall",
-        ("food", "enforcement"): "food/enforcement",
-    }
-    key = (product_type, source)
-    endpoint = endpoint_map.get(key, f"{product_type}/enforcement")
-    result = await openfda_client.query(
-        endpoint=endpoint,
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response(endpoint, result)
-
-
-@mcp.tool()
-async def search_drug_labels(
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search FDA drug product labeling (SPL).
-    Returns label sections: indications, dosage, warnings, adverse reactions.
-
-    Example searches:
-      search='openfda.brand_name:"LIPITOR"'
-      search='indications_and_usage:"diabetes"+AND+openfda.manufacturer_name:"Novo+Nordisk"'
-    """
-    result = await openfda_client.query(
-        endpoint="drug/label",
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response("drug/label", result)
-
-
-@mcp.tool()
-async def search_drugs(
-    source: Literal["approvals", "ndc"],
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search FDA-approved drugs or the National Drug Code directory.
-    source="approvals" searches Drugs@FDA; source="ndc" searches the NDC directory.
-
-    Example searches:
-      source="approvals", search='sponsor_name:"Pfizer"'
-      source="ndc", search='brand_name:"ASPIRIN"'
-    """
-    endpoint_map = {
-        "approvals": "drug/drugsfda",
-        "ndc": "drug/ndc",
-    }
-    endpoint = endpoint_map[source]
     result = await openfda_client.query(
         endpoint=endpoint,
         search=search,
-        limit=min(limit, 100),
+        limit=limit,
         skip=skip,
         sort=sort,
     )
-    return summarize_response(endpoint, result)
-
-
-@mcp.tool()
-async def search_drug_shortages(
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search FDA drug shortage reports.
-
-    Example searches:
-      search='generic_name:"doxycycline"'
-      search='status:"Resolved"'
-    """
-    result = await openfda_client.query(
-        endpoint="drug/shortage",
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response("drug/shortage", result)
-
-
-@mcp.tool()
-async def search_device_submissions(
-    submission_type: Literal["510k", "pma", "classification", "registration"],
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search FDA device premarket submissions and classifications.
-    Covers 510(k), PMA, device classification, and registration/listing data.
-
-    Example searches:
-      submission_type="510k", search='device_name:"pulse+oximeter"'
-      submission_type="pma", search='applicant:"Medtronic"'
-      submission_type="classification", search='device_class:3'
-      submission_type="registration", search='proprietary_name:"Fitbit"'
-    """
-    endpoint_map = {
-        "510k": "device/510k",
-        "pma": "device/pma",
-        "classification": "device/classification",
-        "registration": "device/registrationlisting",
-    }
-    endpoint = endpoint_map[submission_type]
-    result = await openfda_client.query(
-        endpoint=endpoint,
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response(endpoint, result)
-
-
-@mcp.tool()
-async def search_device_udi(
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search the FDA Unique Device Identifier (UDI) database.
-    Returns device identifiers, brand names, and manufacturer info.
-
-    Example searches:
-      search='brand_name:"Freestyle"'
-      search='company_name:"Abbott"'
-    """
-    result = await openfda_client.query(
-        endpoint="device/udi",
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response("device/udi", result)
-
-
-@mcp.tool()
-async def search_substances(
-    source: Literal["substance", "unii", "nsde"],
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search FDA substance, UNII, or NDC/SPL data elements databases.
-    source="substance" for substance registrations, "unii" for ingredient IDs,
-    "nsde" for NDC/SPL data elements.
-
-    Example searches:
-      source="substance", search='substance_name:"ASPIRIN"'
-      source="unii", search='display_name:"caffeine"'
-      source="nsde", search='marketing_category:"NDA"'
-    """
-    endpoint_map = {
-        "substance": "other/substance",
-        "unii": "other/unii",
-        "nsde": "other/nsde",
-    }
-    endpoint = endpoint_map[source]
-    result = await openfda_client.query(
-        endpoint=endpoint,
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response(endpoint, result)
-
-
-@mcp.tool()
-async def search_other(
-    dataset: Literal["historical_documents", "covid19_serology"],
-    search: str,
-    limit: int = 10,
-    skip: int = 0,
-    sort: str | None = None,
-) -> str:
-    """Search other FDA datasets: historical documents or COVID-19 serology tests.
-
-    Example searches:
-      dataset="historical_documents", search='title:"aspirin"'
-      dataset="covid19_serology", search='manufacturer:"Abbott"'
-    """
-    endpoint_map = {
-        "historical_documents": "other/historicaldocument",
-        "covid19_serology": "device/covid19serology",
-    }
-    endpoint = endpoint_map[dataset]
-    result = await openfda_client.query(
-        endpoint=endpoint,
-        search=search,
-        limit=min(limit, 100),
-        skip=skip,
-        sort=sort,
-    )
-    return summarize_response(endpoint, result)
+    response = summarize_response(endpoint, result)
+    if note:
+        response = note + "\n\n" + response
+    return response

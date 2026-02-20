@@ -83,10 +83,7 @@ class OpenFDAClient:
                     )
 
                 if response.status_code == 404:
-                    raise NotFoundError(
-                        "Try broadening your search terms or check "
-                        "field names with list_searchable_fields."
-                    )
+                    raise NotFoundError(endpoint=endpoint)
                 if response.status_code == 429:
                     raise RateLimitError()
                 if response.status_code == 400:

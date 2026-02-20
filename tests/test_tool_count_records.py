@@ -23,6 +23,8 @@ async def test_count_drug_event(mock_openfda_count):
     # Narrative summary
     assert "most common" in result.lower()
     assert "NAUSEA" in result
+    # No .exact warning since field ends with .exact
+    assert "Warning" not in result
 
 
 @pytest.mark.asyncio
@@ -75,12 +77,57 @@ async def test_count_invalid_endpoint():
 
 
 @pytest.mark.asyncio
-async def test_count_limit_capped(mock_openfda_count):
-    """Limit above 1000 is capped to 1000."""
+async def test_count_limit_capped_with_note(mock_openfda_count):
+    """Limit above 1000 is capped and a note is prepended."""
     result = await count_records(
         endpoint="drug/event",
         count_field="serious.exact",
         limit=5000,
     )
-    # Should still return valid results (limit capping is internal)
     assert "NAUSEA" in result
+    assert "limit was reduced" in result
+    assert "5000" in result
+    assert "1000" in result
+
+
+@pytest.mark.asyncio
+async def test_count_limit_within_bounds_no_note(mock_openfda_count):
+    """Limit within bounds produces no clamping note."""
+    result = await count_records(
+        endpoint="drug/event",
+        count_field="serious.exact",
+        limit=500,
+    )
+    assert "limit was reduced" not in result
+
+
+@pytest.mark.asyncio
+async def test_exact_warning_when_missing_suffix(mock_openfda_count):
+    """Warning when count_field doesn't end with .exact on a text field."""
+    result = await count_records(
+        endpoint="drug/event",
+        count_field="patient.reaction.reactionmeddrapt",
+    )
+    assert "Warning" in result
+    assert ".exact" in result
+    assert "patient.reaction.reactionmeddrapt.exact" in result
+
+
+@pytest.mark.asyncio
+async def test_no_exact_warning_with_suffix(mock_openfda_count):
+    """No warning when count_field ends with .exact."""
+    result = await count_records(
+        endpoint="drug/event",
+        count_field="patient.reaction.reactionmeddrapt.exact",
+    )
+    assert "Warning" not in result
+
+
+@pytest.mark.asyncio
+async def test_no_exact_warning_for_known_numeric(mock_openfda_count):
+    """No warning for known numeric fields like 'serious'."""
+    result = await count_records(
+        endpoint="drug/event",
+        count_field="serious",
+    )
+    assert "Warning" not in result

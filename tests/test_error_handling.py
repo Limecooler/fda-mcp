@@ -27,8 +27,10 @@ async def test_404_raises_not_found_error():
         client = OpenFDAClient()
         with pytest.raises(NotFoundError) as exc_info:
             await client.query("drug/event", search="nonexistent:value")
-        assert "No results found" in str(exc_info.value)
-        assert "list_searchable_fields" in str(exc_info.value)
+        msg = str(exc_info.value)
+        assert "No results found" in msg
+        assert "list_searchable_fields" in msg
+        assert "drug/event" in msg
 
 
 @pytest.mark.anyio
@@ -63,7 +65,7 @@ async def test_500_raises_openfda_error():
 
 @pytest.mark.anyio
 async def test_400_raises_invalid_search_error():
-    """API 400 response raises InvalidSearchError with syntax help."""
+    """API 400 response raises InvalidSearchError with inline syntax help."""
     with respx.mock(assert_all_called=False) as router:
         router.get(f"{BASE_URL}/drug/event.json").mock(
             return_value=httpx.Response(
@@ -74,8 +76,9 @@ async def test_400_raises_invalid_search_error():
         with pytest.raises(InvalidSearchError) as exc_info:
             await client.query("drug/event", search="bad[syntax")
         msg = str(exc_info.value)
-        assert "Invalid search" in msg or "syntax" in msg.lower()
-        assert "query-syntax" in msg
+        assert "Invalid search" in msg
+        assert "list_searchable_fields" in msg
+        assert "Quick reference" in msg
 
 
 @pytest.mark.anyio
@@ -124,25 +127,37 @@ def test_document_not_found_error_includes_url():
 
 
 def test_not_found_error_with_detail():
-    """NotFoundError includes optional detail string."""
+    """NotFoundError includes optional detail string and troubleshooting."""
     err = NotFoundError("Try different terms.")
     msg = str(err)
     assert "No results found" in msg
     assert "Try different terms" in msg
+    assert "list_searchable_fields" in msg
 
 
 def test_not_found_error_without_detail():
     """NotFoundError works without detail."""
     err = NotFoundError()
-    assert "No results found" in str(err)
+    msg = str(err)
+    assert "No results found" in msg
+    assert "list_searchable_fields" in msg
 
 
-def test_invalid_search_error_includes_resource_hint():
-    """InvalidSearchError always mentions the query-syntax resource."""
+def test_not_found_error_with_endpoint():
+    """NotFoundError includes endpoint when provided."""
+    err = NotFoundError(endpoint="drug/event")
+    msg = str(err)
+    assert "drug/event" in msg
+    assert "Troubleshooting" in msg
+
+
+def test_invalid_search_error_includes_inline_syntax():
+    """InvalidSearchError includes inline syntax quick reference."""
     err = InvalidSearchError("bad field name")
     msg = str(err)
-    assert "query-syntax" in msg
+    assert "Quick reference" in msg
     assert "bad field name" in msg
+    assert "list_searchable_fields" in msg
 
 
 def test_rate_limit_error_message():

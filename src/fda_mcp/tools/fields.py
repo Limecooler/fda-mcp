@@ -17,12 +17,20 @@ async def list_searchable_fields(
     """List searchable fields for any OpenFDA endpoint.
     Returns field names, types, and descriptions.
 
-    Use category="common" for the most frequently used fields (default).
-    Use category="all" for the complete field listing.
+    When to use: Call this BEFORE searching if you're unsure which field
+    names to use in a search query. Field names vary between endpoints.
 
     Args:
-        endpoint: One of the 21 OpenFDA endpoints (e.g., "drug/event").
-        category: "common" for key fields, "all" for complete listing.
+        endpoint: One of the 21 OpenFDA endpoint paths:
+            Drug: drug/event, drug/label, drug/ndc, drug/drugsfda,
+                  drug/enforcement, drug/shortage
+            Device: device/event, device/510k, device/pma,
+                    device/classification, device/enforcement, device/recall,
+                    device/registrationlisting, device/udi, device/covid19serology
+            Food: food/event, food/enforcement
+            Other: other/historicaldocument, other/substance, other/unii, other/nsde
+        category: "common" for the most frequently used fields (default),
+            "all" for the complete field listing.
     """
     valid_paths = {ep.value for ep in OpenFDAEndpoint}
     if endpoint not in valid_paths:

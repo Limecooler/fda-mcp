@@ -90,5 +90,8 @@ async def fetch_and_extract_pdf(url: str, max_length: int = 8000) -> str:
 
     header = f"Source: {url}\nPages: {page_count}\nExtraction: {extraction_method}\n"
     if truncated:
-        header += f"[Truncated to {max_length} chars. Full document is longer.]\n"
+        header += (
+            f"[Truncated to {max_length} chars. Full document is longer. "
+            f"Call again with a larger max_length to see more.]\n"
+        )
     return header + "\n" + text
