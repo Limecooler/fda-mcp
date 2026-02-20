@@ -29,6 +29,7 @@ COMMON MISTAKES:
 QUERY RECIPES (natural language → API query):
 - De Novo grants: dataset=device_510k, search='decision_code:"DENG"'
 - De Novos by division: add advisory_committee code (DE=Dental, CV=Cardiovascular, etc.)
+- De Novo classifications: dataset=device_classification, search='submission_type_id:6'
 - 510(k) clearances only: dataset=device_510k, search='decision_code:"SESE"'
 - Class III devices: dataset=device_classification, search='device_class:3'
 - PMA approvals: dataset=device_pma, search='decision_code:"APPR"'

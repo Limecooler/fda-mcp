@@ -79,6 +79,7 @@ async def search_fda(
               device_510k — 510(k) clearances, De Novo grants, and HDE submissions
               device_pma — PMA approvals and supplements
               device_classification — Product code classification database
+                (submission_type_id: 1=510k, 2=PMA, 4=510k Exempt, 6=De Novo, 7=HDE)
               device_recalls — Device recall enforcement reports
               device_recall_details — Detailed device recall information
               device_registration — Facility registrations and product listings
